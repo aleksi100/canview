@@ -1,0 +1,16 @@
+td, th{
+  width: 150px;
+  border: 1px solid white;
+  height: 50px;
+  font-size: 30px;
+}
+.data{
+  width: 400px;
+}
+.pgn{
+  width: 300px;
+}
+.count{
+  font-size: 18px;
+  width: 100px;
+}

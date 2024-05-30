@@ -15,10 +15,10 @@ def parseFrame(frame):
     id = int(id, 16)
     data = int(data, 16)
     parsed["id"] = id
-    parsed["pgn"] = (id >> 8) & pgn_mask
-    parsed["sa"] = id & 0xff
+    parsed["pgn"] = hex((id >> 8) & pgn_mask)
+    parsed["sa"] = hex(id & 0xff)
     parsed["time"] = time[1:-1]
-    parsed["data"] = data
+    parsed["data"] = hex(data)
     parsed["count"] = 1
     return parsed
 
