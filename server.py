@@ -7,6 +7,10 @@ import threading
 
 pgn_mask = (0b11 << 16) | 0xffff
 
+# pgn that is being send many times a second
+# and you dont want to focus on those
+spam_pgns = ("0xf013", )
+
 
 def parseFrame(frame):
     parsed = {}
@@ -20,30 +24,65 @@ def parseFrame(frame):
     parsed["time"] = time[1:-1]
     parsed["data"] = hex(data)
     parsed["count"] = 1
+    parsed["name_id"] = '?'
     return parsed
 
 
 class Frames:
-    frames = {}
+    frames = []
 
-    def updateFrames(self, frame):
+    def updateFrames(self, raw_frame):
         """
             This funtion gets called from another thread running getCanFrames in stream.py
-            Expected frame format "(time) interface id#data)"
-
-            frame is considered new according to id field of the frame
+            Expected raw_frame format "(time) interface id#data)"
         """
-        frame = parseFrame(frame)
-        if frame["id"] in self.frames:
-            # modifying existing frame
-            frame["count"] = self.frames[frame["id"]]["count"] + 1
-            self.frames[frame["id"]] = frame
-        else:
-            # adding new frame
-            self.frames[frame["id"]] = frame
+        self.addAdresses()
+        parsed = parseFrame(raw_frame)
+        last = False
+        if len(self.frames) > 0:
+            last = self.frames[-1]
 
-    def addFrame(self, id, frame):
-        self.frames[id] = frame
+
+        if (parsed["pgn"] in spam_pgns) and (parsed["id"] in [f["id"] for f in self.frames]):
+            for i, f in enumerate(self.frames):
+                if f["id"] == parsed["id"]:
+                    last = self.frames[i]
+                    last["time"] = parsed["time"]
+                    last["count"] += 1
+                    last["data"] = parsed["data"]
+                    self.frames[i] = last
+                    break
+
+
+        # if last and parsed["id"] == last["id"]:
+        #     last = self.frames[-1]
+        #     last["time"] = parsed["time"]
+        #     last["count"] += 1
+        #     last["data"] = parsed["data"]
+        #     self.frames[-1] = last
+        #
+        else:
+            self.frames.append(parsed)
+            if len(self.frames)>50:
+                self.frames.pop(0)
+
+
+        # Adress claim pgn
+        if parsed["pgn"] == "0xeeff":
+            idstr = parsed["data"][2:8]
+            arr = bytearray.fromhex(idstr)
+            arr.reverse()
+            self.frames[-1]["name_id"] = arr.hex()
+
+    def addAdresses(self):
+        known = {}
+        for frame in self.frames:
+            if frame["name_id"] != "?":
+                known[frame["sa"]] = frame["name_id"]
+
+        for i, frame in enumerate(self.frames):
+            if frame["sa"] in known:
+                self.frames[i]["name_id"] = known[frame["sa"]]
 
     def getFrames(self):
         return self.frames
