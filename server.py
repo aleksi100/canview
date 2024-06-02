@@ -36,14 +36,16 @@ class Frames:
             This funtion gets called from another thread running getCanFrames in stream.py
             Expected raw_frame format "(time) interface id#data)"
         """
-        self.addAdresses()
+
         parsed = parseFrame(raw_frame)
         last = False
         if len(self.frames) > 0:
             last = self.frames[-1]
 
-
+        # if the pgn is spam_pgn and is already stored, we only update its values
         if (parsed["pgn"] in spam_pgns) and (parsed["id"] in [f["id"] for f in self.frames]):
+
+            # find the frame and modify it
             for i, f in enumerate(self.frames):
                 if f["id"] == parsed["id"]:
                     last = self.frames[i]
@@ -53,26 +55,25 @@ class Frames:
                     self.frames[i] = last
                     break
 
-
-        # if last and parsed["id"] == last["id"]:
-        #     last = self.frames[-1]
-        #     last["time"] = parsed["time"]
-        #     last["count"] += 1
-        #     last["data"] = parsed["data"]
-        #     self.frames[-1] = last
-        #
         else:
             self.frames.append(parsed)
-            if len(self.frames)>50:
+            # we dont want to store all frames so we start dropping them
+            if len(self.frames) > 50:
                 self.frames.pop(0)
-
 
         # Adress claim pgn
         if parsed["pgn"] == "0xeeff":
+            # ectract the id from name
+            # we have to do some processing becaus the 21bit id is stoded in little endian
             idstr = parsed["data"][2:8]
             arr = bytearray.fromhex(idstr)
             arr.reverse()
+            # adding name_id filed to the current frame
+            # self.addAdresses copies that to all frames with same address
             self.frames[-1]["name_id"] = arr.hex()
+
+        # if name id is known for incoming frame source address we want to add the name id to the frame
+        self.addAdresses()
 
     def addAdresses(self):
         known = {}
