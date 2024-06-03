@@ -24,7 +24,12 @@ function Display({ url }) {
   }, [])
   return (
     <>
-        <table>
+      <div className='m-2 text-2xl'>
+
+      <h2>To request name:</h2>
+      <code>$cansend [can0/vcan0] 00eaff00#00ee00</code>
+      </div>
+        <table className='m-2'>
           <tbody>
             <tr>
               <th className='name'>Name</th>
@@ -36,7 +41,7 @@ function Display({ url }) {
             {data ? (
               data.map(frame => {
                 return (
-                  <tr>
+                  <tr key={frame.time}>
                     <td className='name'>{frame.name_id}</td>
                     <td className='sa'>{frame.sa}</td>
                     <td className='pgn'>
